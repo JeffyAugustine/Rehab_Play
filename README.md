@@ -7,7 +7,7 @@
 Simulated robotic therapy assistant that turns range-of-motion exercises into an adaptive game, built on NVIDIA Isaac Sim, Isaac Lab, and Isaac GR00T.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Python 3.11](https://img.shields.io/badge/python-3.11-blue.svg)](https://www.python.org/downloads/)
+[![Python 3.10](https://img.shields.io/badge/python-3.10-blue.svg)](https://www.python.org/downloads/)
 [![Isaac Lab](https://img.shields.io/badge/Isaac%20Lab-2.3-76B900.svg)](https://isaac-sim.github.io/IsaacLab/)
 [![Isaac Sim](https://img.shields.io/badge/Isaac%20Sim-5.1-76B900.svg)](https://developer.nvidia.com/isaac-sim)
 [![Status: In Development](https://img.shields.io/badge/status-in%20development-orange.svg)](#roadmap)
@@ -75,7 +75,7 @@ Patient Movement → Isaac Sim Simulation → GR00T Policy → Game Engine → S
 
 ### Prerequisites
 
-- Python 3.11+
+- Python 3.10 (required by both Isaac Sim and Isaac GR00T — newer versions are not currently supported by either)
 - An [NVIDIA Brev](https://brev.dev) account (or local workstation meeting [Isaac Sim's system requirements](https://docs.omniverse.nvidia.com/isaacsim/latest/installation/requirements.html))
 - Git LFS (for pulling demonstration datasets)
 
