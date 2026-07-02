@@ -1,0 +1,41 @@
+# --- Python ---
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.eggs/
+build/
+dist/
+.venv/
+venv/
+env/
+
+# --- Isaac Sim / Isaac Lab ---
+*.usd.bak
+logs/
+outputs/
+*.kit.log
+.isaac_sim/
+
+# --- ML artifacts (large, should not be versioned) ---
+*.pt
+*.pth
+*.ckpt
+*.safetensors
+checkpoints/
+demo_data/*.parquet
+wandb/
+
+# --- Environment / secrets ---
+.env
+.env.local
+*.pem
+
+# --- OS / editor ---
+.DS_Store
+.vscode/
+.idea/
+*.swp
+
+# --- Jupyter ---
+.ipynb_checkpoints/
