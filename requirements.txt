@@ -1,3 +1,5 @@
+# Requires Python 3.10 (mandated by Isaac Sim and Isaac GR00T; other versions unsupported)
+#
 # Core RL / simulation stack (installed via Isaac Lab environment; listed for reference)
 # isaaclab and isaacsim are provided by the Isaac Lab Launchable / local install,
 # not installed via pip directly. See docs/setup.md.
