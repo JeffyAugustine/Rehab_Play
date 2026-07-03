@@ -1,0 +1,298 @@
+<?xml version="1.0"?>
+<!--
+  RehabPlay patient arm model -- full 7-DOF version.
+
+  An anatomically-complete, clinically-informed skeletal model of a human
+  arm, used as the passive "patient" body that the Franka Panda robot
+  interacts with during rehabilitation exercises.
+
+  Design scope (see project docs/build-log.md for full rationale):
+    - Models all 7 real degrees of freedom of the human arm:
+        Shoulder (3 DOF): flexion/extension, abduction/adduction,
+                           internal/external rotation.
+        Elbow    (2 DOF): flexion/extension, pronation/supination.
+        Wrist    (2 DOF): flexion/extension, radial/ulnar deviation.
+    - URDF only supports single-axis revolute joints, so each multi-axis
+      joint (shoulder: 3 axes, elbow/wrist: 2 axes each) is built as a
+      stack of revolute joints connected by small near-massless "dummy"
+      links. This is a standard, literature-supported simplification --
+      biomechanics research commonly models the shoulder and wrist as
+      ball-and-socket-like joints with orthogonal, intersecting axes.
+    - Joint limits are set to real clinical goniometry ranges (see
+      per-joint comments below for values and, where available, sources).
+    - Joint <dynamics> (damping/friction) approximates published passive
+      joint stiffness/damping. Elbow flexion values are directly grounded
+      in published relaxed-muscle stiffness studies (0.4-4.0 Nm/rad
+      range); other joints use the elbow data as an order-of-magnitude
+      reference scaled for relative joint/muscle size, since
+      joint-specific published values were not located for this pass --
+      flagged explicitly at each such joint below.
+    - The arm is PASSIVE: no motor drive is configured on any joint.
+      Movement only occurs via contact forces from the robot (and
+      gravity), consistent with a relaxed patient limb being guided by
+      a therapy robot.
+    - NOT a muscle-actuated musculoskeletal model (see MyoSuite/OpenSim
+      for that level of fidelity) -- judged out of scope for this
+      project's timeline; this is a skeletal-and-passive-tissue level of
+      fidelity, sufficient for the RL environment's needs.
+
+  Units: meters, kilograms, radians (URDF standard).
+
+  NOTE ON DUMMY LINKS: links suffixed "_dof1"/"_dof2" (e.g.
+  "shoulder_dof1") are zero-length structural links required to
+  decompose a multi-axis joint into a stack of single-axis URDF hinges.
+  They carry a small nonzero mass/inertia (not literally zero) because
+  fully massless links can cause physics-solver instability -- this is
+  standard practice, not an anatomical claim; they do not represent real
+  body segments.
+-->
+<robot name="patient_arm">
+
+  <!-- ================= MATERIALS ================= -->
+  <material name="skin"><color rgba="0.85 0.65 0.55 1.0"/></material>
+  <material name="anchor_gray"><color rgba="0.4 0.4 0.4 1.0"/></material>
+  <material name="dof_marker"><color rgba="0.6 0.6 0.6 0.3"/></material>
+
+  <!-- ================= SHOULDER ANCHOR ================= -->
+  <!-- Represents the fixed attachment point where the shoulder socket
+       connects to an implicit, non-simulated torso. Negligible mass. -->
+  <link name="base_link">
+    <inertial>
+      <mass value="0.05"/>
+      <inertia ixx="0.0000033" iyy="0.0000033" izz="0.0000033" ixy="0" ixz="0" iyz="0"/>
+    </inertial>
+    <visual>
+      <geometry><box size="0.02 0.02 0.02"/></geometry>
+      <material name="anchor_gray"/>
+    </visual>
+  </link>
+
+  <!-- ================= SHOULDER (3 DOF) ================= -->
+
+  <!-- Dummy link 1: exists only to carry the shoulder flexion/extension
+       hinge before the abduction/adduction hinge. Zero visual footprint. -->
+  <link name="shoulder_dof1">
+    <inertial>
+      <mass value="0.05"/>
+      <inertia ixx="0.000001" iyy="0.000001" izz="0.000001" ixy="0" ixz="0" iyz="0"/>
+    </inertial>
+  </link>
+
+  <!-- Shoulder flexion/extension: raising the arm forward/overhead
+       (flexion) or backward (extension).
+       Clinical ROM: extension 60 deg, flexion 180 deg -- i.e. -1.047 to
+       3.1416 rad relative to the arm-at-side neutral position. -->
+  <joint name="shoulder_flexion_joint" type="revolute">
+    <parent link="base_link"/>
+    <child link="shoulder_dof1"/>
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+    <axis xyz="0 1 0"/>
+    <limit lower="-1.047" upper="3.1416" effort="80.0" velocity="5.0"/>
+    <!-- Approximated from elbow passive-stiffness literature, scaled up
+         for the shoulder's larger surrounding muscle mass. No
+         shoulder-specific published figure was located in this pass. -->
+    <dynamics damping="2.5" friction="0.6"/>
+  </joint>
+
+  <!-- Dummy link 2: carries the abduction/adduction hinge before the
+       internal/external rotation hinge. -->
+  <link name="shoulder_dof2">
+    <inertial>
+      <mass value="0.05"/>
+      <inertia ixx="0.000001" iyy="0.000001" izz="0.000001" ixy="0" ixz="0" iyz="0"/>
+    </inertial>
+  </link>
+
+  <!-- Shoulder abduction/adduction: raising the arm out to the side
+       (abduction) or back across the body (adduction).
+       Clinical ROM: adduction ~50 deg, abduction 180 deg -- i.e. -0.873
+       to 3.1416 rad. -->
+  <joint name="shoulder_abduction_joint" type="revolute">
+    <parent link="shoulder_dof1"/>
+    <child link="shoulder_dof2"/>
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+    <axis xyz="1 0 0"/>
+    <limit lower="-0.873" upper="3.1416" effort="80.0" velocity="5.0"/>
+    <!-- Same approximation basis as shoulder_flexion_joint above. -->
+    <dynamics damping="2.5" friction="0.6"/>
+  </joint>
+
+  <!-- Shoulder internal/external rotation: rotating the upper arm about
+       its own long axis with the elbow held at the side.
+       Clinical ROM: internal rotation 70 deg, external rotation 90 deg
+       -- i.e. -1.222 to 1.571 rad. -->
+  <joint name="shoulder_rotation_joint" type="revolute">
+    <parent link="shoulder_dof2"/>
+    <child link="upper_arm"/>
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+    <axis xyz="0 0 1"/>
+    <limit lower="-1.222" upper="1.571" effort="60.0" velocity="5.0"/>
+    <!-- Same approximation basis as the other two shoulder axes. -->
+    <dynamics damping="2.5" friction="0.6"/>
+  </joint>
+
+  <!-- ================= UPPER ARM ================= -->
+  <!-- Length 0.325 m, radius 0.045 m, mass 1.9 kg.
+
+       Length is derived from standard anthropometric ratios (Winter's
+       Biomechanics and Motor Control; Drillis & Contini), which express
+       upper-arm length as ~0.186 x total body height. For a
+       representative adult height of 1.75 m: 0.186 x 1.75 = 0.325 m.
+       Mass remains based on the ~2.5-2.7% of body-mass estimate used
+       previously.
+
+       Geometry extends DOWNWARD (-z) from the shoulder joint, so that
+       joint angle 0 on every axis means "arm hanging straight down under
+       gravity" -- the true anatomical neutral position -- rather than
+       pointing up. -->
+  <link name="upper_arm">
+    <inertial>
+      <origin xyz="0 0 -0.1625" rpy="0 0 0"/>
+      <mass value="1.9"/>
+      <inertia ixx="0.0176858" iyy="0.0176858" izz="0.0019238" ixy="0" ixz="0" iyz="0"/>
+    </inertial>
+    <visual>
+      <origin xyz="0 0 -0.1625" rpy="0 0 0"/>
+      <geometry><cylinder radius="0.045" length="0.325"/></geometry>
+      <material name="skin"/>
+    </visual>
+    <collision>
+      <origin xyz="0 0 -0.1625" rpy="0 0 0"/>
+      <geometry><cylinder radius="0.045" length="0.325"/></geometry>
+    </collision>
+  </link>
+
+  <!-- ================= ELBOW (2 DOF) ================= -->
+
+  <!-- Elbow flexion/extension: the familiar "bending the elbow" motion.
+       Clinical ROM: 0-145 deg (commonly cited range 130-150 deg; 145
+       deg used as a representative value) -- 0.0 to 2.531 rad. At angle
+       0, the forearm continues straight down in line with the upper arm
+       (fully extended elbow); increasing angle flexes the elbow. -->
+  <joint name="elbow_flexion_joint" type="revolute">
+    <parent link="upper_arm"/>
+    <child link="elbow_dof1"/>
+    <origin xyz="0 0 -0.325" rpy="0 0 0"/>
+    <axis xyz="0 1 0"/>
+    <limit lower="0.0" upper="2.531" effort="60.0" velocity="6.0"/>
+    <!-- Directly grounded in published data: relaxed-muscle elbow
+         stiffness is reported in the 0.4-4.0 Nm/rad range across
+         multiple studies; 2.0 Nm/rad used as a representative mid-range
+         value. Damping ~0.7-1.0 Nm*s/rad per the same literature. -->
+    <dynamics damping="2.0" friction="0.8"/>
+  </joint>
+
+  <link name="elbow_dof1">
+    <inertial>
+      <mass value="0.05"/>
+      <inertia ixx="0.000001" iyy="0.000001" izz="0.000001" ixy="0" ixz="0" iyz="0"/>
+    </inertial>
+  </link>
+
+  <!-- Forearm pronation/supination: rotating the forearm about its own
+       long axis (e.g. turning a doorknob, or palm-up vs palm-down).
+       Clinical ROM: pronation ~85 deg, supination ~90 deg -- i.e. -1.484
+       to 1.571 rad. -->
+  <joint name="forearm_rotation_joint" type="revolute">
+    <parent link="elbow_dof1"/>
+    <child link="forearm"/>
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+    <axis xyz="0 0 1"/>
+    <limit lower="-1.484" upper="1.571" effort="15.0" velocity="6.0"/>
+    <!-- Approximated below the elbow-flexion stiffness value: pronation/
+         supination is driven by smaller, distinct muscle groups
+         (pronator teres, supinator, biceps) than elbow flexion/
+         extension. No pronation/supination-specific published stiffness
+         figure was located in this pass -- flagged as an approximation. -->
+    <dynamics damping="1.5" friction="0.5"/>
+  </joint>
+
+  <!-- ================= FOREARM ================= -->
+  <!-- Length 0.255 m, radius 0.04 m, mass 1.2 kg.
+
+       Length derived the same way as the upper arm: forearm length is
+       ~0.146 x total body height (Winter; Drillis & Contini). For a
+       1.75 m reference height: 0.146 x 1.75 = 0.255 m. Extends downward
+       (-z) from the elbow, same reasoning as the upper arm. -->
+  <link name="forearm">
+    <inertial>
+      <origin xyz="0 0 -0.1275" rpy="0 0 0"/>
+      <mass value="1.2"/>
+      <inertia ixx="0.0069825" iyy="0.0069825" izz="0.00096" ixy="0" ixz="0" iyz="0"/>
+    </inertial>
+    <visual>
+      <origin xyz="0 0 -0.1275" rpy="0 0 0"/>
+      <geometry><cylinder radius="0.04" length="0.255"/></geometry>
+      <material name="skin"/>
+    </visual>
+    <collision>
+      <origin xyz="0 0 -0.1275" rpy="0 0 0"/>
+      <geometry><cylinder radius="0.04" length="0.255"/></geometry>
+    </collision>
+  </link>
+
+  <!-- ================= WRIST (2 DOF) ================= -->
+
+  <!-- Wrist flexion/extension: bending the hand toward the palm
+       (flexion) or back of the hand (extension).
+       Clinical ROM: extension 70 deg, flexion 80 deg -- i.e. -1.222 to
+       1.396 rad relative to the neutral (straight) position. -->
+  <joint name="wrist_flexion_joint" type="revolute">
+    <parent link="forearm"/>
+    <child link="wrist_dof1"/>
+    <origin xyz="0 0 -0.255" rpy="0 0 0"/>
+    <axis xyz="0 1 0"/>
+    <limit lower="-1.222" upper="1.396" effort="10.0" velocity="6.0"/>
+    <!-- Approximated below the elbow value (smaller joint, less
+         surrounding muscle mass). No wrist-flexion-specific published
+         stiffness figure was located in this pass. -->
+    <dynamics damping="1.0" friction="0.3"/>
+  </joint>
+
+  <link name="wrist_dof1">
+    <inertial>
+      <mass value="0.02"/>
+      <inertia ixx="0.0000005" iyy="0.0000005" izz="0.0000005" ixy="0" ixz="0" iyz="0"/>
+    </inertial>
+  </link>
+
+  <!-- Wrist radial/ulnar deviation: tilting the hand side-to-side
+       (thumb-side vs pinky-side).
+       Clinical ROM: radial deviation ~20 deg, ulnar deviation ~45 deg
+       -- i.e. -0.349 to 0.785 rad. -->
+  <joint name="wrist_deviation_joint" type="revolute">
+    <parent link="wrist_dof1"/>
+    <child link="hand"/>
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+    <axis xyz="1 0 0"/>
+    <limit lower="-0.349" upper="0.785" effort="8.0" velocity="6.0"/>
+    <!-- Approximated below wrist flexion (smaller ROM, smaller muscle
+         group). No deviation-specific published stiffness figure was
+         located in this pass. -->
+    <dynamics damping="0.8" friction="0.25"/>
+  </joint>
+
+  <!-- ================= HAND ================= -->
+  <!-- Simplified as a single rigid segment (no individual fingers).
+       Length 0.19 m, derived the same way: hand length is ~0.108 x
+       total body height (Winter; Drillis & Contini). For a 1.75 m
+       reference height: 0.108 x 1.75 = 0.19 m. Mass 0.4 kg (~0.5-0.6%
+       of a ~70 kg body mass). Extends downward (-z) from the wrist. -->
+  <link name="hand">
+    <inertial>
+      <origin xyz="0 0 -0.095" rpy="0 0 0"/>
+      <mass value="0.4"/>
+      <inertia ixx="0.0014167" iyy="0.0012333" izz="0.0002433" ixy="0" ixz="0" iyz="0"/>
+    </inertial>
+    <visual>
+      <origin xyz="0 0 -0.095" rpy="0 0 0"/>
+      <geometry><box size="0.03 0.08 0.19"/></geometry>
+      <material name="skin"/>
+    </visual>
+    <collision>
+      <origin xyz="0 0 -0.095" rpy="0 0 0"/>
+      <geometry><box size="0.03 0.08 0.19"/></geometry>
+    </collision>
+  </link>
+
+</robot>

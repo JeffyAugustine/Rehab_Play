@@ -3,8 +3,10 @@
 This script does NOT run the full RehabEnv (that requires the action /
 observation / reward / termination managers to be implemented first,
 which is later in the Week 2 plan). It only verifies that the scene --
-ground plane, lighting, and the Franka Panda robot -- spawns correctly
-in Isaac Sim and that the robot's joints report sensible values.
+ground plane, lighting, the patient torso, the Franka Panda robot, and
+the articulated patient arm -- spawns correctly in Isaac Sim, and that
+the patient arm's joints report sensible names, initial positions, and
+clinical ROM limits.
 
 Usage
 -----
@@ -15,6 +17,9 @@ Expected output
     [INFO]: Scene loaded successfully.
     [INFO]: Robot joint names: [...]
     [INFO]: Robot default joint positions: [...]
+    [INFO]: Patient arm joint names: ['shoulder_flexion_joint', 'shoulder_abduction_joint', 'shoulder_rotation_joint', 'elbow_flexion_joint', 'forearm_rotation_joint', 'wrist_flexion_joint', 'wrist_deviation_joint']
+    [INFO]: Patient arm initial joint positions: [...]
+    [INFO]: Patient arm joint limits (lower, upper): [...]
 
 followed by the simulation closing itself after a short run.
 """
@@ -62,11 +67,12 @@ def main() -> None:
     sim_cfg = sim_utils.SimulationCfg(dt=1.0 / 120.0)
     sim = SimulationContext(sim_cfg)
 
-    # Point the default camera at roughly where the robot will be, so if
-    # you're viewing this through the Isaac Sim streaming viewer (rather
-    # than running fully headless), you see the robot immediately instead
-    # of having to manually navigate the empty scene.
-    sim.set_camera_view(eye=[2.0, 2.0, 2.0], target=[0.0, 0.0, 0.5])
+    # Point the default camera at roughly the center of the scene (robot
+    # + torso + arm cluster), so if you're viewing this through the
+    # Isaac Sim streaming viewer, you see everything at once instead of
+    # having to manually navigate. Raised target height slightly to
+    # account for the taller torso/higher shoulder point.
+    sim.set_camera_view(eye=[2.5, 2.0, 2.0], target=[0.5, 0.0, 0.55])
 
     # Build the scene from our config. num_envs=1 here since this is a
     # single-instance visual/structural smoke test, not vectorized
@@ -82,6 +88,15 @@ def main() -> None:
     print(
         "[INFO]: Robot default joint positions: "
         f"{scene['robot'].data.default_joint_pos}"
+    )
+    print(f"[INFO]: Patient arm joint names: {scene['patient_arm'].joint_names}")
+    print(
+        "[INFO]: Patient arm initial joint positions: "
+        f"{scene['patient_arm'].data.joint_pos}"
+    )
+    print(
+        "[INFO]: Patient arm joint limits (lower, upper): "
+        f"{scene['patient_arm'].data.joint_pos_limits}"
     )
 
     # sim.get_physics_dt() reads back the ACTIVE physics timestep from the
