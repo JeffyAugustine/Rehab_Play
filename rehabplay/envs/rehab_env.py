@@ -31,6 +31,8 @@ Isaac Lab manager-based environment tutorials:
 
 from __future__ import annotations
 
+import isaaclab.sim as sim_utils
+from isaaclab.assets import ArticulationCfg, AssetBaseCfg
 from isaaclab.envs import ManagerBasedRLEnv, ManagerBasedRLEnvCfg
 from isaaclab.managers import (
     ActionTermCfg,
@@ -44,17 +46,51 @@ from isaaclab.managers import (
 from isaaclab.scene import InteractiveSceneCfg
 from isaaclab.utils import configclass
 
+from isaaclab_assets.robots.franka import FRANKA_PANDA_CFG  # isort: skip
+
 
 @configclass
 class RehabSceneCfg(InteractiveSceneCfg):
     """Scene configuration: robot, patient limb, and sensors.
 
-    TODO (Week 2):
-        - Add Franka Panda articulation from Isaac Lab's built-in assets.
+    Currently populated:
+        - Ground plane and dome light (required for any Isaac Sim scene).
+        - Franka Panda robot articulation, using Isaac Lab's built-in
+          pretrained configuration.
+
+    TODO (Week 2, remaining):
         - Add simplified patient limb (rigid body; soft-body/Newton later).
         - Add force sensor(s) on the robot end-effector / limb contact.
-        - Add ground plane and lighting.
     """
+
+    # Ground plane: a flat static collision surface. Every Isaac Sim scene
+    # needs one, or the robot (and anything else with gravity enabled)
+    # falls indefinitely.
+    ground = AssetBaseCfg(
+        prim_path="/World/defaultGroundPlane",
+        spawn=sim_utils.GroundPlaneCfg(),
+    )
+
+    # Dome light: uniform ambient lighting for the whole scene. Without a
+    # light source, the camera/viewer sees a black scene (this doesn't
+    # affect physics, only visualization/streaming).
+    dome_light = AssetBaseCfg(
+        prim_path="/World/Light",
+        spawn=sim_utils.DomeLightCfg(intensity=2000.0, color=(0.75, 0.75, 0.75)),
+    )
+
+    # Robot: Franka Panda, using Isaac Lab's pretrained/pre-configured
+    # articulation (FRANKA_PANDA_CFG). This config already defines the
+    # robot's default joint positions, actuator stiffness/damping, and
+    # USD asset path -- we only need to set where it spawns.
+    #
+    # "{ENV_REGEX_NS}/Robot" is Isaac Lab's convention for a prim path
+    # that resolves correctly whether num_envs is 1 (as it is now, for
+    # this initial scene test) or scaled up to thousands of parallel
+    # environments later for PPO training.
+    robot: ArticulationCfg = FRANKA_PANDA_CFG.replace(
+        prim_path="{ENV_REGEX_NS}/Robot"
+    )
 
 
 @configclass
