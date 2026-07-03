@@ -125,12 +125,12 @@ RehabPlay/
 
 ## Roadmap
 
-Development follows a structured week-by-week build plan:
+Development follows a structured build plan:
 
-- [x] **Week 1 — Foundations:** Isaac Lab environment validated on cloud GPU infrastructure; core API concepts documented.
-- [ ] **Week 2 — Rehabilitation Environment:** Custom manager-based environment with safety-constrained reward shaping.
-- [ ] **Week 3 — Synthetic Data & Fine-Tuning:** Demonstration collection, Mimic-based data generation, GR00T fine-tuning.
-- [ ] **Week 4+ — Application Layer:** Gamified interface and therapist dashboard integration.
+- [x] **Phase 1 — Foundations:** Isaac Lab environment validated on cloud GPU infrastructure; core API concepts documented.
+- [ ] **Phase 2 — Rehabilitation Environment:** Custom manager-based environment with safety-constrained reward shaping.
+- [ ] **Phase 3 — Synthetic Data & Fine-Tuning:** Demonstration collection, Mimic-based data generation, GR00T fine-tuning.
+- [ ] **Phase 4+ — Application Layer:** Gamified interface and therapist dashboard integration.
 
 Detailed technical progress notes are maintained in [`docs/build-log.md`](docs/build-log.md).
 
